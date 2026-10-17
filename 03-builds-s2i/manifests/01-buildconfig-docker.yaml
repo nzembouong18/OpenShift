@@ -1,0 +1,72 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: hello-docker
+  namespace: lab-builds
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: hello-docker
+  namespace: lab-builds
+spec:
+  runPolicy: Serial
+  successfulBuildsHistoryLimit: 3
+  failedBuildsHistoryLimit: 2
+  source:
+    type: Git
+    git:
+      uri: https://github.com/nzembouong18/OpenShift
+      ref: main
+    contextDir: 03-builds-s2i/manifests/app-docker
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Containerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: hello-docker:latest
+  resources:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  triggers:
+    - type: ConfigChange
+    - type: Generic
+      generic:
+        secretReference:
+          name: hello-docker-webhook
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-docker-webhook
+  namespace: lab-builds
+type: Opaque
+stringData:
+  WebHookSecretKey: change-me-formation
+---
+# Variante binaire (Lab 3.4) : oc start-build hello-bin --from-dir=...
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: hello-bin
+  namespace: lab-builds
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: hello-bin
+  namespace: lab-builds
+spec:
+  source:
+    type: Binary
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Containerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: hello-bin:latest

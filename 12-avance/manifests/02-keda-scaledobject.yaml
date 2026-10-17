@@ -1,0 +1,32 @@
+# Operator « Custom Metrics Autoscaler » installé (KedaController créé dans openshift-keda)
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: worker, namespace: lab-avance}
+spec:
+  replicas: 0
+  selector: {matchLabels: {app: worker}}
+  template:
+    metadata: {labels: {app: worker}}
+    spec:
+      containers:
+        - name: worker
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command: ["sh", "-c", "sleep infinity"]
+          resources: {requests: {cpu: 10m, memory: 16Mi}}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata: {name: worker, namespace: lab-avance}
+spec:
+  scaleTargetRef:
+    name: worker
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 60
+  triggers:
+    - type: cron
+      metadata:
+        timezone: Europe/Paris
+        start: "*/2 * * * *"
+        end: "1-59/2 * * * *"
+        desiredReplicas: "3"

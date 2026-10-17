@@ -1,0 +1,44 @@
+# Operator OpenShift Virtualization + CR HyperConverged requis
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: demo-vm
+  namespace: lab-avance
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: demo-vm
+    spec:
+      domain:
+        cpu: {cores: 2}
+        memory: {guest: 2Gi}
+        devices:
+          disks:
+            - {name: rootdisk, disk: {bus: virtio}}
+            - {name: cloudinit, disk: {bus: virtio}}
+          interfaces:
+            - {name: default, masquerade: {}}
+      networks:
+        - {name: default, pod: {}}
+      volumes:
+        - name: rootdisk
+          containerDisk:
+            image: quay.io/containerdisks/fedora:latest
+        - name: cloudinit
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              user: cloud-user
+              password: change-me-formation
+              chpasswd: {expire: false}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: demo-vm-ssh, namespace: lab-avance}
+spec:
+  selector:
+    kubevirt.io/domain: demo-vm
+  ports:
+    - {name: ssh, port: 22, targetPort: 22}

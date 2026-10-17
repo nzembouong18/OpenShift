@@ -1,0 +1,61 @@
+# 4 pannes à diagnostiquer (lab 10.6)
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: broken-image, namespace: lab-obs}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: broken-image}}
+  template:
+    metadata: {labels: {app: broken-image}}
+    spec:
+      containers:
+        - name: c
+          image: registry.access.redhat.com/ubi9/ubi-minimal:tag-inexistant
+          command: ["sleep", "infinity"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: broken-config, namespace: lab-obs}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: broken-config}}
+  template:
+    metadata: {labels: {app: broken-config}}
+    spec:
+      containers:
+        - name: c
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command: ["sleep", "infinity"]
+          envFrom: [{configMapRef: {name: absent-cm}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: broken-memory, namespace: lab-obs}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: broken-memory}}
+  template:
+    metadata: {labels: {app: broken-memory}}
+    spec:
+      containers:
+        - name: c
+          image: registry.access.redhat.com/ubi9/python-312:latest
+          command: ["python", "-c", "x = bytearray(200*1024*1024); import time; time.sleep(3600)"]
+          resources:
+            limits: {memory: 8Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: broken-pending, namespace: lab-obs}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: broken-pending}}
+  template:
+    metadata: {labels: {app: broken-pending}}
+    spec:
+      containers:
+        - name: c
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          command: ["sleep", "infinity"]
+          resources:
+            requests: {cpu: "100"}

@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vote-api
+spec:
+  selector:
+    matchLabels: {app: vote-api}
+  endpoints:
+    - {port: http, path: /metrics, interval: 30s}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vote-api
+spec:
+  groups:
+    - name: vote-api
+      rules:
+        - alert: VoteApiDown
+          expr: absent(up{service="vote-api"} == 1)
+          for: 2m
+          labels: {severity: critical}
+          annotations:
+            summary: "Aucune instance vote-api disponible"
+            runbook_url: https://github.com/nzembouong18/OpenShift/blob/main/13-projet-final/RUNBOOK.md
+        - alert: VoteApiHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{service="vote-api",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{service="vote-api"}[5m])) > 0.05
+          for: 5m
+          labels: {severity: warning}
+          annotations:
+            summary: "Plus de 5 % d'erreurs 5xx sur vote-api"

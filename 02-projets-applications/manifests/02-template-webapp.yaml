@@ -1,0 +1,69 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: webapp
+  annotations:
+    description: "Application web statique (UBI nginx) avec Service et Route"
+    tags: "formation,nginx"
+labels:
+  template: webapp
+  app: ${NAME}
+parameters:
+  - name: NAME
+    description: Nom de l'application
+    required: true
+  - name: REPLICAS
+    description: Nombre de réplicas
+    value: "1"
+  - name: IMAGE
+    description: Image du serveur web (non-root, port 8080)
+    value: registry.access.redhat.com/ubi9/nginx-124:latest
+objects:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ${NAME}
+    spec:
+      replicas: ${{REPLICAS}}
+      selector:
+        matchLabels:
+          app: ${NAME}
+      template:
+        metadata:
+          labels:
+            app: ${NAME}
+        spec:
+          containers:
+            - name: web
+              image: ${IMAGE}
+              ports:
+                - containerPort: 8080
+              readinessProbe:
+                httpGet: {path: /, port: 8080}
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+                limits: {memory: 256Mi}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${NAME}
+    spec:
+      selector:
+        app: ${NAME}
+      ports:
+        - name: http
+          port: 8080
+          targetPort: 8080
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: ${NAME}
+    spec:
+      to:
+        kind: Service
+        name: ${NAME}
+      port:
+        targetPort: http
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect

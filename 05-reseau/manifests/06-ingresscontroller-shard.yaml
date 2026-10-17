@@ -1,0 +1,20 @@
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: internal
+  namespace: openshift-ingress-operator
+spec:
+  domain: internal.apps.CHANGE-ME.example.com
+  replicas: 2
+  endpointPublishingStrategy:
+    type: LoadBalancerService
+    loadBalancer:
+      scope: Internal
+  routeSelector:
+    matchLabels:
+      type: internal
+  namespaceSelector:
+    matchLabels:
+      env: internal
+  tlsSecurityProfile:
+    type: Intermediate

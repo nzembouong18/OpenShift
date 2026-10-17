@@ -1,0 +1,23 @@
+# Prérequis : namespace cible étiqueté
+#   oc label namespace lab-cicd argocd.argoproj.io/managed-by=openshift-gitops
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vote-api
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/nzembouong18/OpenShift
+    targetRevision: main
+    path: 13-projet-final/manifests/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-cicd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

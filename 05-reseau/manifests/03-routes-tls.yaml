@@ -1,0 +1,65 @@
+# Re-encrypt avec certificat émis par le Service CA du cluster
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-tls-conf
+  namespace: lab-reseau
+data:
+  nginx.conf: |
+    pid /tmp/nginx.pid;
+    events {}
+    http {
+      access_log /dev/stdout;
+      error_log /dev/stderr;
+      client_body_temp_path /tmp/c; proxy_temp_path /tmp/p; fastcgi_temp_path /tmp/f; uwsgi_temp_path /tmp/u; scgi_temp_path /tmp/s;
+      server {
+        listen 8443 ssl;
+        ssl_certificate     /etc/tls/tls.crt;
+        ssl_certificate_key /etc/tls/tls.key;
+        location / { return 200 "secure backend\n"; }
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure
+  namespace: lab-reseau
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: secure-tls
+spec:
+  selector: {app: secure}
+  ports: [{name: https, port: 8443, targetPort: 8443}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: secure, namespace: lab-reseau}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: secure}}
+  template:
+    metadata: {labels: {app: secure}}
+    spec:
+      containers:
+        - name: nginx
+          image: registry.access.redhat.com/ubi9/nginx-124:latest
+          command: ["nginx", "-c", "/etc/nginx-custom/nginx.conf", "-g", "daemon off;"]
+          ports: [{containerPort: 8443}]
+          volumeMounts:
+            - {name: tls, mountPath: /etc/tls, readOnly: true}
+            - {name: conf, mountPath: /etc/nginx-custom, readOnly: true}
+          resources: {requests: {cpu: 10m, memory: 32Mi}}
+      volumes:
+        - {name: tls, secret: {secretName: secure-tls}}
+        - {name: conf, configMap: {name: nginx-tls-conf}}
+---
+# Passthrough : le TLS est déchiffré par le Pod (SNI)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata: {name: secure-passthrough, namespace: lab-reseau}
+spec:
+  to: {kind: Service, name: secure}
+  port: {targetPort: https}
+  tls: {termination: passthrough, insecureEdgeTerminationPolicy: Redirect}
+# Re-encrypt : créer la route avec le CA de destination
+#   oc create route reencrypt secure-re --service=secure --dest-ca-cert=<(oc get cm openshift-service-ca.crt -o jsonpath='{.data.service-ca\.crt}')

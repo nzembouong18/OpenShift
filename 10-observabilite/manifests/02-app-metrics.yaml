@@ -1,0 +1,64 @@
+# Application de démonstration : traefik/whoami est remplacée par une mini app Python exposant /metrics
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: metrics-app-src, namespace: lab-obs}
+data:
+  app.py: |
+    import random, time
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    counts = {}
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/metrics":
+                lines = ["# TYPE http_requests_total counter"]
+                for (p, s), v in counts.items():
+                    lines.append('http_requests_total{path="%s",status="%s"} %d' % (p, s, v))
+                body = "\n".join(lines) + "\n"
+                self.send_response(200); self.send_header("Content-Type", "text/plain"); self.end_headers()
+                self.wfile.write(body.encode()); return
+            status = 500 if self.path == "/fail" else 200
+            counts[(self.path, str(status))] = counts.get((self.path, str(status)), 0) + 1
+            self.send_response(status); self.end_headers(); self.wfile.write(b"ok\n")
+        def log_message(self, *a): pass
+    HTTPServer(("", 8080), H).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: metrics-app, namespace: lab-obs}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: metrics-app}}
+  template:
+    metadata: {labels: {app: metrics-app}}
+    spec:
+      containers:
+        - name: app
+          image: registry.access.redhat.com/ubi9/python-312:latest
+          command: ["python", "/src/app.py"]
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /metrics, port: 8080}
+          volumeMounts: [{name: src, mountPath: /src}]
+          resources:
+            requests: {cpu: 20m, memory: 48Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - {name: src, configMap: {name: metrics-app-src}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics-app
+  namespace: lab-obs
+  labels: {app: metrics-app}
+spec:
+  selector: {app: metrics-app}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata: {name: metrics-app, namespace: lab-obs}
+spec:
+  to: {kind: Service, name: metrics-app}
+  port: {targetPort: http}
+  tls: {termination: edge}

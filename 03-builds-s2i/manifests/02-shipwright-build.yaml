@@ -1,0 +1,29 @@
+# Builds for Red Hat OpenShift (Shipwright) — vérifiez les noms avec : oc get clusterbuildstrategy
+apiVersion: shipwright.io/v1beta1
+kind: Build
+metadata:
+  name: vote-api-sw
+  namespace: lab-builds
+spec:
+  source:
+    type: Git
+    git:
+      url: https://github.com/nzembouong18/OpenShift
+    contextDir: 13-projet-final/app
+  strategy:
+    name: buildah-shipwright-managed-push
+    kind: ClusterBuildStrategy
+  paramValues:
+    - name: dockerfile
+      value: Containerfile
+  output:
+    image: image-registry.openshift-image-registry.svc:5000/lab-builds/vote-api-sw:latest
+---
+apiVersion: shipwright.io/v1beta1
+kind: BuildRun
+metadata:
+  generateName: vote-api-sw-
+  namespace: lab-builds
+spec:
+  build:
+    name: vote-api-sw

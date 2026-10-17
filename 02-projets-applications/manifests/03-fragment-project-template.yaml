@@ -1,0 +1,35 @@
+# Objets à insérer dans la section « objects » du template généré par
+#   oc adm create-bootstrap-project-template -o yaml
+# (le template complet s'appelle project-request dans openshift-config)
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: default-quota
+  spec:
+    hard:
+      pods: "20"
+      requests.cpu: "4"
+      requests.memory: 8Gi
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: default-limits
+  spec:
+    limits:
+      - type: Container
+        defaultRequest: {cpu: 50m, memory: 64Mi}
+        default: {cpu: 500m, memory: 512Mi}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: deny-all-ingress-except-router-and-same-ns
+  spec:
+    podSelector: {}
+    policyTypes: [Ingress]
+    ingress:
+      - from:
+          - podSelector: {}
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: ingress

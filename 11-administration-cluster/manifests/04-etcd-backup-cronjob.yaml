@@ -1,0 +1,44 @@
+# BASE À DURCIR — test sur cluster jetable uniquement. Nécessite un projet dédié, un SA avec SCC privileged.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: etcd-backup-formation
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: etcd-backup, namespace: etcd-backup-formation}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: {name: etcd-backup-formation}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin}
+subjects: [{kind: ServiceAccount, name: etcd-backup, namespace: etcd-backup-formation}]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: etcd-backup, namespace: etcd-backup-formation}
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: etcd-backup
+          restartPolicy: Never
+          nodeSelector: {node-role.kubernetes.io/master: ""}
+          tolerations: [{key: node-role.kubernetes.io/master, operator: Exists, effect: NoSchedule}]
+          hostPID: true
+          hostNetwork: true
+          containers:
+            - name: backup
+              image: registry.redhat.io/openshift4/ose-cli:latest
+              securityContext: {privileged: true, runAsUser: 0}
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  NODE=$(oc get nodes -l node-role.kubernetes.io/master -o name | head -1)
+                  oc debug $NODE -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/assets/backup

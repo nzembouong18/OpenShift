@@ -1,0 +1,26 @@
+# Panne volontaire : la liveness probe cible un chemin inexistant
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crash
+  namespace: lab-workloads
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: crash}
+  template:
+    metadata:
+      labels: {app: crash}
+    spec:
+      containers:
+        - name: web
+          image: registry.access.redhat.com/ubi9/nginx-124:latest
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}

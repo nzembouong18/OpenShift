@@ -1,0 +1,13 @@
+apiVersion: k8s.ovn.org/v1
+kind: EgressFirewall
+metadata:
+  name: default
+  namespace: lab-reseau
+spec:
+  egress:
+    - type: Allow
+      to: {dnsName: registry.access.redhat.com}
+    - type: Allow
+      to: {cidrSelector: 172.30.0.0/16}
+    - type: Deny
+      to: {cidrSelector: 0.0.0.0/0}

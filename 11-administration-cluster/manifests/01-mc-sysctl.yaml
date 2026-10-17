@@ -1,0 +1,18 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-worker-sysctl-formation
+  labels:
+    machineconfiguration.openshift.io/role: worker
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/sysctl.d/99-formation.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            # vm.max_map_count=262144 (URL-encodé)
+            source: data:,vm.max_map_count%3D262144%0A

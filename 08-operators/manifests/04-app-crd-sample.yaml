@@ -1,0 +1,48 @@
+# CRD d'exemple pour le Lab 8.7 : un contrôleur la transforme en Deployment + Service + Route
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: apps.demo.formation.io
+spec:
+  group: demo.formation.io
+  scope: Namespaced
+  names:
+    kind: App
+    listKind: AppList
+    plural: apps
+    singular: app
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - {name: Image, type: string, jsonPath: .spec.image}
+        - {name: Replicas, type: integer, jsonPath: .spec.replicas}
+        - {name: Ready, type: string, jsonPath: ".status.conditions[?(@.type=='Ready')].status"}
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string}
+                replicas: {type: integer, minimum: 1, maximum: 10, default: 1}
+                port: {type: integer, default: 8080}
+                expose: {type: boolean, default: true}
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: demo.formation.io/v1
+kind: App
+metadata:
+  name: demo
+  namespace: lab-operators
+spec:
+  image: registry.access.redhat.com/ubi9/nginx-124:latest
+  replicas: 2
+  expose: true

@@ -1,0 +1,118 @@
+# Tekton v1 — Operator OpenShift Pipelines requis. Tâches du catalogue du cluster via resolver « cluster ».
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: hello
+  namespace: lab-cicd
+spec:
+  steps:
+    - name: echo
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      script: |
+        #!/bin/sh
+        echo "Bonjour depuis Tekton"
+    - name: date
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      script: |
+        #!/bin/sh
+        date
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+  namespace: lab-cicd
+spec:
+  params:
+    - name: git-url
+      type: string
+    - name: git-revision
+      type: string
+      default: main
+    - name: context-dir
+      type: string
+      default: 13-projet-final/app
+    - name: image
+      type: string
+      description: Référence de l'image à produire (sans tag)
+    - name: deploy
+      type: string
+      default: "true"
+  workspaces:
+    - name: source
+  tasks:
+    - name: fetch
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: git-clone}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: URL, value: $(params.git-url)}
+        - {name: REVISION, value: $(params.git-revision)}
+      workspaces:
+        - {name: output, workspace: source}
+    - name: tests
+      runAfter: [fetch]
+      params:
+        - {name: context-dir, value: $(params.context-dir)}
+      workspaces:
+        - {name: source, workspace: source}
+      taskSpec:
+        params:
+          - name: context-dir
+        workspaces:
+          - name: source
+        steps:
+          - name: pytest
+            image: registry.access.redhat.com/ubi9/python-312:latest
+            workingDir: $(workspaces.source.path)/$(params.context-dir)
+            script: |
+              #!/bin/bash
+              set -e
+              pip install --user -q -r requirements.txt pytest
+              python -m pytest -q
+    - name: build
+      runAfter: [tests]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: buildah}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: IMAGE, value: "$(params.image):$(tasks.fetch.results.commit)"}
+        - {name: DOCKERFILE, value: $(params.context-dir)/Containerfile}
+        - {name: CONTEXT, value: $(params.context-dir)}
+      workspaces:
+        - {name: source, workspace: source}
+    - name: deploy
+      runAfter: [build]
+      when:
+        - input: $(params.deploy)
+          operator: in
+          values: ["true"]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: openshift-client}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - name: SCRIPT
+          value: |
+            oc set image deployment/vote-api api=$(params.image)@$(tasks.build.results.IMAGE_DIGEST) -n lab-cicd || \
+            oc create deployment vote-api --image=$(params.image)@$(tasks.build.results.IMAGE_DIGEST) -n lab-cicd
+            oc rollout status deployment/vote-api -n lab-cicd --timeout=120s
+  finally:
+    - name: report
+      params:
+        - {name: status, value: $(tasks.status)}
+      taskSpec:
+        params:
+          - name: status
+        steps:
+          - name: print
+            image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+            script: echo "Statut du pipeline = $(params.status)"

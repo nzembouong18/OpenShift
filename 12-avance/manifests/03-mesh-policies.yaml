@@ -1,0 +1,28 @@
+# Namespace étiqueté pour l'injection (Service Mesh 3 / Istio) : istio-injection=enabled (ou istio.io/rev)
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata: {name: default, namespace: lab-avance}
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: {name: deny-all, namespace: lab-avance}
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata: {name: allow-frontend-to-api, namespace: lab-avance}
+spec:
+  selector:
+    matchLabels: {app: api}
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/lab-avance/sa/frontend"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/*"]

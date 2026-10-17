@@ -1,0 +1,50 @@
+# Logging 6.x — Operators « Red Hat OpenShift Logging » et « Loki Operator » installés ; secret S3 « logging-loki-s3 » préparé.
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: logging-loki
+  namespace: openshift-logging
+spec:
+  size: 1x.demo
+  storage:
+    schemas:
+      - version: v13
+        effectiveDate: "2024-10-01"
+    secret:
+      name: logging-loki-s3
+      type: s3
+  storageClassName: CHANGE-ME
+  tenants:
+    mode: openshift-logging
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: collector, namespace: openshift-logging}
+---
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata: {name: collector, namespace: openshift-logging}
+spec:
+  serviceAccount: {name: collector}
+  outputs:
+    - name: default-lokistack
+      type: lokiStack
+      lokiStack:
+        authentication:
+          token:
+            from: serviceAccount
+        target:
+          name: logging-loki
+          namespace: openshift-logging
+      tls:
+        ca:
+          key: service-ca.crt
+          configMapName: openshift-service-ca.crt
+  pipelines:
+    - name: default-logstore
+      inputRefs: [application, infrastructure]
+      outputRefs: [default-lokistack]
+# Droits nécessaires au SA « collector » :
+#   oc adm policy add-cluster-role-to-user logging-collector-logs-writer -z collector -n openshift-logging
+#   oc adm policy add-cluster-role-to-user collect-application-logs -z collector -n openshift-logging
+#   oc adm policy add-cluster-role-to-user collect-infrastructure-logs -z collector -n openshift-logging

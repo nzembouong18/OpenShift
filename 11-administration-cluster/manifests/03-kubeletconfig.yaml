@@ -1,0 +1,13 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: KubeletConfig
+metadata:
+  name: big-nodes
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      custom-kubelet: big-nodes
+  kubeletConfig:
+    maxPods: 400
+    systemReserved:
+      cpu: 500m
+      memory: 1Gi

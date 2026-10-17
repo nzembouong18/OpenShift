@@ -1,0 +1,39 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: workers-health
+  namespace: openshift-machine-api
+spec:
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-machine-role: worker
+  maxUnhealthy: 40%
+  nodeStartupTimeout: 10m
+  unhealthyConditions:
+    - {type: Ready, status: "False", timeout: 300s}
+    - {type: Ready, status: Unknown, timeout: 300s}
+---
+apiVersion: autoscaling.openshift.io/v1
+kind: ClusterAutoscaler
+metadata:
+  name: default
+spec:
+  resourceLimits:
+    maxNodesTotal: 12
+  scaleDown:
+    enabled: true
+    delayAfterAdd: 10m
+    unneededTime: 5m
+---
+apiVersion: autoscaling.openshift.io/v1beta1
+kind: MachineAutoscaler
+metadata:
+  name: worker-a
+  namespace: openshift-machine-api
+spec:
+  minReplicas: 1
+  maxReplicas: 4
+  scaleTargetRef:
+    apiVersion: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: CHANGE-ME-machineset-name

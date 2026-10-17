@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata: {name: metrics-app, namespace: lab-obs}
+spec:
+  selector:
+    matchLabels: {app: metrics-app}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata: {name: metrics-app-alerts, namespace: lab-obs}
+spec:
+  groups:
+    - name: metrics-app.rules
+      rules:
+        - record: job:http_error_ratio:rate5m
+          expr: |
+            sum(rate(http_requests_total{namespace="lab-obs",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{namespace="lab-obs"}[5m]))
+        - alert: MetricsAppHighErrorRate
+          expr: job:http_error_ratio:rate5m > 0.05
+          for: 5m
+          labels: {severity: critical}
+          annotations:
+            summary: "Taux d'erreurs 5xx supérieur à 5 % sur metrics-app"
+            description: "Taux actuel : {{ $value | humanizePercentage }}"
+            runbook_url: https://example.com/runbooks/metrics-app-errors
+        - alert: MetricsAppDown
+          expr: absent(up{namespace="lab-obs",service="metrics-app"} == 1)
+          for: 1m
+          labels: {severity: warning}
+          annotations:
+            summary: "Aucune instance metrics-app n'est scrapée"

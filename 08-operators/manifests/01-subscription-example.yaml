@@ -1,0 +1,13 @@
+# Exemple : Operator « Web Terminal » en installation Manual dans openshift-operators
+# Vérifiez le nom et le canal : oc get packagemanifest web-terminal -n openshift-marketplace
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: web-terminal
+  namespace: openshift-operators
+spec:
+  channel: fast
+  name: web-terminal
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Manual

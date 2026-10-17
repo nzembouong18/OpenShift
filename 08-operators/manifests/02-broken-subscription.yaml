@@ -1,0 +1,17 @@
+# Panne volontaire : nom de package erroné et OperatorGroup absent
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-operators
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cloudnative-pg-typo
+  namespace: lab-operators
+spec:
+  channel: stable-v1
+  name: cloudnative-pgg
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: vote-app
+    includeSelectors: false
+resources:
+  - serviceaccount.yaml
+  - postgres.yaml
+  - api.yaml
+  - frontend.yaml
+  - route.yaml
+  - hpa-pdb.yaml
+  - networkpolicies.yaml
+  - monitoring.yaml
+# FORMATION UNIQUEMENT : en vrai, utiliser Sealed Secrets / External Secrets / Vault (module 06)
+secretGenerator:
+  - name: postgres
+    literals:
+      - POSTGRESQL_USER=app
+      - POSTGRESQL_PASSWORD=change-me-formation
+      - POSTGRESQL_DATABASE=vote
+images:
+  - name: vote-api
+    newName: image-registry.openshift-image-registry.svc:5000/lab-cicd/vote-api
+    newTag: latest

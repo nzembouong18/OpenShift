@@ -1,0 +1,28 @@
+# Exemple (bare metal / platform none). NE PAS COMMITER de vraies valeurs de pullSecret / sshKey.
+apiVersion: v1
+baseDomain: example.com
+metadata:
+  name: formation
+compute:
+  - name: worker
+    replicas: 3
+    architecture: amd64
+controlPlane:
+  name: master
+  replicas: 3
+  architecture: amd64
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+  serviceNetwork:
+    - 172.30.0.0/16
+  machineNetwork:
+    - cidr: 192.168.100.0/24
+platform:
+  none: {}
+fips: false
+publish: External
+pullSecret: '{"auths":{...}}'      # depuis console.redhat.com
+sshKey: ssh-ed25519 AAAA...        # clé publique

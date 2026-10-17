@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vote-frontend
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="fr"><head><meta charset="utf-8"><title>Vote</title></head>
+    <body>
+      <h1>Chats ou chiens ?</h1>
+      <button onclick="vote('a')">🐱 Chats</button>
+      <button onclick="vote('b')">🐶 Chiens</button>
+      <pre id="out">…</pre>
+      <script>
+        async function vote(c){ await fetch('/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({choice:c})}); refresh(); }
+        async function refresh(){ const r = await fetch('/api/results'); document.getElementById('out').textContent = JSON.stringify(await r.json(), null, 2); }
+        refresh(); setInterval(refresh, 3000);
+      </script>
+    </body></html>
+  api-proxy.conf: |
+    location /api/ {
+      proxy_pass http://vote-api:8080;
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: vote-frontend}
+  template:
+    metadata:
+      labels: {app: vote-frontend, tier: web}
+    spec:
+      serviceAccountName: vote
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: nginx
+          image: registry.access.redhat.com/ubi9/nginx-124:latest
+          ports: [{name: http, containerPort: 8080}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          readinessProbe:
+            httpGet: {path: /, port: http}
+          livenessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 10
+          volumeMounts:
+            - {name: web, mountPath: /opt/app-root/src/index.html, subPath: index.html}
+            - {name: web, mountPath: /opt/app-root/etc/nginx.default.d/api-proxy.conf, subPath: api-proxy.conf}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: web
+          configMap: {name: vote-frontend}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-frontend
+spec:
+  selector: {app: vote-frontend}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

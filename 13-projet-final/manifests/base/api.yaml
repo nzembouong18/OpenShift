@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vote-api-config
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: vote
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-api
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels: {app: vote-api}
+  template:
+    metadata:
+      labels: {app: vote-api, tier: api}
+    spec:
+      serviceAccountName: vote
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {app: vote-api}
+      containers:
+        - name: api
+          image: vote-api
+          ports: [{name: http, containerPort: 8080}]
+          envFrom: [{configMapRef: {name: vote-api-config}}]
+          env:
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: postgres, key: POSTGRESQL_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: postgres, key: POSTGRESQL_PASSWORD}}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 96Mi}
+            limits: {memory: 192Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-api
+  labels: {app: vote-api}
+spec:
+  selector: {app: vote-api}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

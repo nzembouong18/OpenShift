@@ -1,0 +1,20 @@
+# Remplacer volumeSnapshotClassName par une classe existante : oc get volumesnapshotclass
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata: {name: data-snap, namespace: lab-stockage}
+spec:
+  volumeSnapshotClassName: csi-hostpath-snapclass
+  source:
+    persistentVolumeClaimName: data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: data-restored, namespace: lab-stockage}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 1Gi}
+  dataSource:
+    name: data-snap
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io

@@ -87,8 +87,9 @@ oc annotate namespace lab-workloads openshift.io/node-selector='tier=app' --over
 oc new-project lab-workloads
 oc apply -f manifests/01-deployment.yaml
 oc get deploy,rs,pods
-oc set image deploy/web web=registry.access.redhat.com/ubi9/nginx-124:1-1                  # rolling update
+oc set image deploy/web web=registry.access.redhat.com/ubi9/nginx-122:latest              # rolling update
 oc rollout status deploy/web ; oc rollout history deploy/web ; oc rollout undo deploy/web
+oc import-image nginx-stream:latest --from=registry.access.redhat.com/ubi9/nginx-124 --confirm
 oc set triggers deploy/web --from-image=nginx-stream:latest -c web
 # Contrainte SCC : image root
 oc create deployment root --image=docker.io/library/nginx:1.27 ; oc get pods ; oc logs deploy/root

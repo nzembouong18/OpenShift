@@ -43,6 +43,7 @@ for e in dev staging prod; do oc new-project vote-$e; done
 # 2. Construire l'image dans lab-cicd (ou dans vote-dev) :
 oc new-project lab-cicd
 oc new-build --name=vote-api --strategy=docker --binary
+oc patch bc/vote-api -p '{"spec":{"strategy":{"dockerStrategy":{"dockerfilePath":"Containerfile"}}}}'
 oc start-build vote-api --from-dir=13-projet-final/app --follow
 # 3. Autoriser l'extraction d'image depuis les autres projets
 for e in dev staging prod; do oc policy add-role-to-group system:image-puller system:serviceaccounts:vote-$e -n lab-cicd; done

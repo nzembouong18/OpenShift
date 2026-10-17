@@ -1,3 +1,4 @@
+# ValidatingAdmissionPolicy est GA (v1) depuis Kubernetes 1.30 (OCP 4.17+) ; avant : v1beta1 / fonctionnalité à activer.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata: {name: no-latest-and-memory-limits}

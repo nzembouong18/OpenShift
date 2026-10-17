@@ -84,6 +84,7 @@ Limites usuelles testées : ~2 000 nœuds, 150 000 Pods par cluster (selon versi
 ## 2. 🎬 Démo (60 min — au choix selon l’équipement)
 
 ```bash
+oc new-project lab-avance
 # Serverless
 oc apply -f manifests/01-knative-service.yaml ; oc get ksvc,revision,pods -w     # scale-to-zero
 curl $(oc get ksvc hello -o jsonpath='{.status.url}')

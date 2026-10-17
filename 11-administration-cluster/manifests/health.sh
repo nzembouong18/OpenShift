@@ -10,7 +10,7 @@ bad_co=$(oc get co --no-headers | awk '$3!="True" || $5=="True"{print $1}')
 bad_nodes=$(oc get nodes --no-headers | awk '$2!="Ready"{print $1}')
 [ -z "$bad_nodes" ] && ok "Tous les nœuds Ready" || fail "Nœuds non Ready : $bad_nodes"
 
-bad_mcp=$(oc get mcp --no-headers | awk '$3!="True" || $5>0{print $1}')
+bad_mcp=$(oc get mcp --no-headers | awk '$3!="True" || $5=="True"{print $1}')
 [ -z "$bad_mcp" ] && ok "MachineConfigPools à jour" || fail "MCP en cours/dégradés : $bad_mcp"
 
 pending_csr=$(oc get csr --no-headers 2>/dev/null | grep -c Pending)

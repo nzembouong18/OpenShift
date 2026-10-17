@@ -99,6 +99,7 @@ Un Operator est souvent **cluster-admin de fait** : audit des permissions (`oc g
 ## 2. 🎬 Démo (45 min)
 
 ```bash
+oc new-project lab-operators
 oc get catalogsource -n openshift-marketplace
 oc get packagemanifest -n openshift-marketplace | wc -l
 oc get packagemanifest cloud-native-postgresql -n openshift-marketplace -o jsonpath='{.status.channels[*].name}'   # ou autre Operator du catalogue

@@ -116,7 +116,7 @@ Un projet par équipe/environnement, quotas, NetworkPolicy, SCC minimales, nœud
 
 ```bash
 oc new-project lab-secu
-# 1. Authentification : HTPasswd
+# 1. Authentification : HTPasswd (outil htpasswd : paquet httpd-tools / apache2-utils)
 htpasswd -c -B -b users.htpasswd alice 'Passw0rd!' ; htpasswd -B -b users.htpasswd bob 'Passw0rd!'
 oc create secret generic htpass-secret --from-file=htpasswd=users.htpasswd -n openshift-config      # 🔑
 oc apply -f manifests/01-oauth-htpasswd.yaml ; oc get pods -n openshift-authentication -w
@@ -209,7 +209,7 @@ Le message liste les champs fautifs (`allowPrivilegeEscalation`, `capabilities`,
 Écrivez une `ValidatingAdmissionPolicy` interdisant `:latest` et les conteneurs sans `resources.limits.memory` dans les projets étiquetés `env=prod`.
 
 <details><summary>Corrigé</summary>
-Voir `manifests/06-vap.yaml` ; test : `oc -n prod-ns run x --image=nginx:latest` → refusé.
+Voir `manifests/06-vap.yaml` (API `v1` à partir d'OCP 4.17) ; test : `oc -n prod-ns run x --image=nginx:latest` → refusé.
 </details>
 
 ### Lab 7.8 ⭐⭐⭐ — Compliance Operator 🔑

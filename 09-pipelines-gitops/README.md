@@ -116,7 +116,7 @@ oc get csv -n openshift-operators | grep -E 'pipelines|gitops'
 oc get tektonconfig config ; oc get argocd -n openshift-gitops
 oc get crd | grep -E 'tekton.dev|argoproj.io' | wc -l
 ```
-Sur le Sandbox, ces Operators sont déjà installés.
+Sur le Sandbox, vous ne pouvez pas installer d'Operators : vérifiez avec l'administrateur de votre environnement s'ils sont déjà disponibles.
 </details>
 
 ### Lab 9.2 ⭐ — Première Task
